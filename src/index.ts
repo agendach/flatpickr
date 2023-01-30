@@ -473,13 +473,16 @@ function FlatpickrInstance(
       bind(self.timeContainer, "click", timeIncrement);
 
       bind([self.hourElement, self.minuteElement], ["focus", "click"], selText);
+      bind([self.hourElement, self.minuteElement], ["keydown"], onKeyDown);
 
-      if (self.secondElement !== undefined)
+      if (self.secondElement !== undefined) {
+        bind(self.secondElement, "keydown", onKeyDown);
         bind(
           self.secondElement,
           "focus",
           () => self.secondElement && self.secondElement.select()
         );
+      }
 
       if (self.amPM !== undefined) {
         bind(self.amPM, "click", (e) => {
@@ -1655,6 +1658,11 @@ function FlatpickrInstance(
     const isInput = self.config.wrap
       ? element.contains(eventTarget as HTMLElement)
       : eventTarget === self._input;
+      const isTimeInput =
+        eventTarget === self.hourElement ||
+        eventTarget === self.minuteElement ||
+        eventTarget === self.secondElement;
+
     const allowInput = self.config.allowInput;
     const allowKeydown = self.isOpen && (!allowInput || !isInput);
     const allowInlineKeydown = self.config.inline && isInput && !allowInput;
@@ -1672,6 +1680,13 @@ function FlatpickrInstance(
         return (eventTarget as HTMLElement).blur();
       } else {
         self.open();
+      }
+    } else if (e.keyCode === 13 && isTimeInput) {
+      if (allowInput) {
+        e.stopPropagation();
+        setHoursFromInputs();
+        updateValue();
+        return self.close();
       }
     } else if (
       isCalendarElem(eventTarget as HTMLElement) ||
@@ -2069,7 +2084,7 @@ function FlatpickrInstance(
     const minMaxTimeSetter = (type: string) => (val: any) => {
       self.config[type === "min" ? "_minTime" : "_maxTime"] = self.parseDate(
         val,
-        "H:i:S"
+        "H:i" + (self.config.enableSeconds ? ":S" : "")
       );
     };
 
@@ -2678,10 +2693,10 @@ function FlatpickrInstance(
 
     self.mobileFormatStr =
       inputType === "datetime-local"
-        ? "Y-m-d\\TH:i:S"
+        ? "Y-m-d\\TH:i" + (self.config.enableSeconds ? ":S" : "")
         : inputType === "date"
         ? "Y-m-d"
-        : "H:i:S";
+        : "H:i" + (self.config.enableSeconds ? ":S" : "")
 
     if (self.selectedDates.length > 0) {
       self.mobileInput.defaultValue = self.mobileInput.value = self.formatDate(
